@@ -125,7 +125,7 @@ module MIPS_part_a3_tb ();
 		@(posedge CLK);
 	end
 	#2
-	$display("13) pc is: %d", mips_inst.CPU.pc);
+	$display("13) pc is: %d", mips_inst.CPU.Register.pc);
 
 	repeat (100) begin //run through the whole loop two more times
 		@(posedge CLK);
