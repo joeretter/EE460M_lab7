@@ -163,6 +163,8 @@ module MIPS_Testbench ();
 	end
 	#2
 	$display("22) Mem[23] is: %d", MEM.RAM[23]);
+	$display("22) $7 is: %d", CPU.Register.REG[7]);
+	$display("22) $4 is: %d", CPU.Register.REG[4]);
 
 	//23) j
 	repeat(2) begin 
