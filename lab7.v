@@ -6,27 +6,31 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module Complete_MIPS(CLK, RST, HALT, A_Out, D_Out, reg_1);
+module Complete_MIPS(CLK, RST, HALT, reg_1_eight_bits);
   // Will need to be modified to add functionality
   input CLK;
   input RST;
   input HALT; 
-  output [31:0] A_Out;
-  output [31:0] D_Out;
-  output [31:0] reg_1;
-
+  //output [31:0] A_Out;
+  //output [31:0] D_Out;
+  output [7:0] reg_1_eight_bits;
+  
+  
+ 
+  wire [31:0] reg_1; 
   wire CS, WE, pulse1;
   wire [6:0] ADDR;
   wire [31:0] Mem_Bus;
  
+  assign reg_1_eight_bits[7:0] = reg_1[7:0]; 
 
-  assign A_Out = ADDR;
-  assign D_Out = Mem_Bus;
+  //assign A_Out = ADDR;
+  //assign D_Out = Mem_Bus;
   
    ///////// SIM VS. SYNTH ON BOARD ///////////
-  assign pulse1 = CLK; // system clk for simulation 
+  //assign pulse1 = CLK; // system clk for simulation 
   
-  //var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK,  pulse1); //1hz clk for synthesis 
+  var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK, pulse1); //1hz clk for synthesis 
   
   ///////// SIM VS. SYNTH ON BOARD ///////////
   
@@ -116,7 +120,7 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2);
+module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, reg_1);
   input CLK;
   input RegW;
   input [4:0] DR;
@@ -125,7 +129,8 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2);
   input [31:0] Reg_In;
   output reg [31:0] ReadReg1;
   output reg [31:0] ReadReg2;
-
+  output [31:0] reg_1; 
+  
   reg [31:0] REG [0:31];
   integer i;
 
@@ -133,7 +138,9 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2);
     ReadReg1 = 0;
     ReadReg2 = 0;
   end
-
+   
+   assign reg_1 = REG[1]; 
+   
   always @(posedge CLK)
   begin
 
@@ -165,7 +172,6 @@ module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
   inout [31:0] Mem_Bus;
   output wire [31:0] reg_1; 
   
-  assign reg_1 = Register.REG[1]; 
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
   parameter add = 6'b100000;//
@@ -216,7 +222,7 @@ module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
 
   //drive memory bus only during writes
   assign ADDR = (fetchDorI)? pc : alu_result_save[6:0]; //ADDR Mux
-  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2);
+  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, reg_1);
 
   initial begin
     op = and1; opsave = and1;
