@@ -1,196 +1,4 @@
-// You can use this skeleton testbench code, the textbook testbench code, or your own
-module MIPS_Testbench ();
-  reg CLK;
-  reg RST;
-  wire CS;
-  wire WE;
-  wire [31:0] Mem_Bus;
-  wire [6:0] Address;
 
-  initial
-  begin
-    CLK = 0;
-  end
-
-  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus);
-  Memory MEM(CS, WE, CLK, Address, Mem_Bus);
-
-  always
-  begin
-    #5 CLK = !CLK; //posedge clk occurs every 10 ns
-  end
-
-  always
-  begin
-    RST <= 1'b1; //reset the processor
-	
-
-
-    //Notice that the memory is initialize in the in the memory module not here
-
-    @(posedge CLK);
-    // driving reset low here puts processor in normal operating mode
-    RST = 1'b0;
-	//1) andi
-	repeat(4) begin // wait 4 clk cycles
-		@(posedge CLK);
-	end
-	#2 //wait another 2 ns after register has been written to see its contents
-	$display("1) $0 is: %d", CPU.Register.REG[0]);
-
-	//2) andi
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("2) $1 is: %d", CPU.Register.REG[1]);
-
-	//3) addi
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("3) $0 is: %d", CPU.Register.REG[0]);
-
-	//4) addi
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("4) $1 is: %d", CPU.Register.REG[1]);
-
-	//5) add
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("5) $2 is: %d", CPU.Register.REG[2]);
-
-	//6) sub
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("6) $3 is: %d", CPU.Register.REG[3]);
-
-	//7) xor1
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("7) $4 is: %d", CPU.Register.REG[4]);
-
-	//8) and1
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("8) $5 is: %d", CPU.Register.REG[5]);
-
-	//9) or1
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("9) $6 is: %d", CPU.Register.REG[6]);
-
-	//10) ori
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("10) $7 is: %d", CPU.Register.REG[7]);
-
-	//11) beq - note that branches are only 3 cylces
-	repeat(3) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("11) pc is: %d", CPU.pc);
-
-	//12) srl
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("12) $7 is: %d", CPU.Register.REG[7]);
-
-	//13) beq
-	repeat(3) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("13) pc is: %d", CPU.pc);
-
-	//15) bne
-	repeat(3) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("15) pc is: %d", CPU.pc);
-
-	//16) sll
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("16) $7 is: %d", CPU.Register.REG[7]);
-
-	//17) bne
-	repeat(3) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("17) pc is: %d", CPU.pc);
-
-	//19) lw
-	repeat(5) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("19) $8 is: %d", CPU.Register.REG[8]);
-
-	//20) jr
-	repeat(3) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("20) pc is: %d", CPU.pc);
-
-	//22) sw
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("22) Mem[23] is: %d", MEM.RAM[23]);
-
-	//23) j
-	repeat(2) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("23) pc is: %d", CPU.pc);
-
-	//25) slt
-	repeat(4) begin 
-		@(posedge CLK);
-	end
-	#2
-	$display("25) $0 is: %d", CPU.Register.REG[0]);
-
-
-
-
-    /* add your testing code here */
-    // you can add in a 'Halt' signal here as well to test Halt operation
-    // you will be verifying your program operation using the
-    // waveform viewer and/or self-checking operations
-
-    $display("TEST COMPLETE");
-    $stop;
-  end
-
-endmodule
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,24 +6,73 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module Complete_MIPS(CLK, RST, A_Out, D_Out);
+module Complete_MIPS(CLK, RST, HALT, A_Out, D_Out, reg_1);
   // Will need to be modified to add functionality
   input CLK;
   input RST;
+  input HALT; 
   output [31:0] A_Out;
   output [31:0] D_Out;
+  output [31:0] reg_1;
 
-  wire CS, WE;
+  wire CS, WE, pulse1;
   wire [6:0] ADDR;
   wire [31:0] Mem_Bus;
+ 
 
   assign A_Out = ADDR;
   assign D_Out = Mem_Bus;
-
-  MIPS CPU(CLK, RST, CS, WE, ADDR, Mem_Bus);
-  Memory MEM(CS, WE, CLK, ADDR, Mem_Bus);
+  
+   ///////// SIM VS. SYNTH ON BOARD ///////////
+  assign pulse1 = CLK; // system clk for simulation 
+  
+  //var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK,  pulse1); //1hz clk for synthesis 
+  
+  ///////// SIM VS. SYNTH ON BOARD ///////////
+  
+  MIPS CPU(pulse1, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
+  Memory MEM(CS, WE, pulse1, ADDR, Mem_Bus);
+  
 
 endmodule
+
+//varilabe clk generate
+//INPUTclk_var 
+//OUTPUT clk divided by (clk_var * 2) = pulse  
+
+module var_clk_div(rst, clk, pulse);  
+input wire rst, clk; 
+output wire pulse; 
+
+reg [31:0] r_reg; 
+wire [31:0] r_nxt; 
+reg clk_track; 
+parameter clk_var = 0; 
+
+assign r_nxt = r_reg+1;   	      
+assign pulse = clk_track; 
+ 
+always @(posedge clk)
+begin
+  if (rst)
+     begin
+        r_reg <= 0;
+	    clk_track <= 1'b1; 
+     end
+ 
+  else if (r_nxt == clk_var)
+ 	   begin
+	     r_reg <= 0;
+	     clk_track <= ~clk_track;
+	   end
+ 
+  else 
+      r_reg <= r_nxt;
+end
+
+
+endmodule
+
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -238,7 +95,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
   begin
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Joe/Documents/GitHub/EE460M_lab7/all_instructions_test.txt", RAM, 0, 24);
+	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/all_instructions_test.txt", RAM, 0, 24);
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
@@ -301,11 +158,14 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus);
-  input CLK, RST;
+module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
+  input CLK, RST, HALT;
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
+  output wire [31:0] reg_1; 
+  
+  assign reg_1 = Register.REG[1]; 
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
   parameter add = 6'b100000;//
@@ -375,8 +235,11 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus);
     npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0;
     case (state)
       0: begin //fetch
-        npc = pc + 7'd1; CS = 1; nstate = 3'd1;
+        if(HALT == 1) begin  nstate = 3'd0; end 
+		else begin 
+		npc = pc + 7'd1; CS = 1; nstate = 3'd1;
         fetchDorI = 1;
+		end 
       end
       1: begin //decode
         nstate = 3'd2; reg_or_imm = 0; alu_or_mem = 0;
@@ -439,6 +302,8 @@ module MIPS (CLK, RST, CS, WE, ADDR, Mem_Bus);
         CS = 1;
         if (`opcode == lw) regw = 1;
       end
+	 
+	  
     endcase
   end //always
 
