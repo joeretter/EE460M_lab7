@@ -23,9 +23,9 @@ module Complete_MIPS(CLK, RST, switches, btnl, btnr, a, b, c, d, e, f, g, dp, an
   //assign D_Out = Mem_Bus;
   
    ///////// SIM VS. SYNTH ON BOARD ///////////
-  assign pulse1 = CLK; // system clk for simulation 
+  //assign pulse1 = CLK; // system clk for simulation 
   
-  //var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK, pulse1); //1hz clk for synthesis 
+  var_clk_div #(64'd25000000) var_clk_div_1(RST, CLK, pulse1); //2hz clk for synthesis 
   
   ///////// SIM VS. SYNTH ON BOARD ///////////
   
