@@ -10,7 +10,7 @@ module MIPS_Testbench_B ();
   wire [6:0] Address;
   wire [31:0] reg_2, reg_3; 
   
-  integer i; 
+  integer i, a, instr; 
   
 
   initial
@@ -40,7 +40,7 @@ module MIPS_Testbench_B ();
     // driving reset low here puts processor in normal operating mode
     RST = 1'b0;
 	
-	
+	/*
 	
 	//1) andi
 	repeat(4) begin // wait 4 clk cycles
@@ -83,6 +83,20 @@ module MIPS_Testbench_B ();
 	end
 	#2
 	$display("6) $3 is: %d", CPU.Register.REG[3]);
+	*/
+
+for (instr = 0; instr < 41; instr = instr + 1)
+begin 
+	@(posedge CLK); 
+	$display("6) $31 is: %d", CPU.Register.REG[31]);
+	for(a = 0; a < 9; a = a + 1 )
+	begin 
+	#2
+	$display("6) $%d is: %d", a, CPU.Register.REG[a]);
+	end 
+	
+end 	
+	
 /*
 	//7) xor1
 	repeat(4) begin 

@@ -61,8 +61,8 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 	end
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/small_program.txt", RAM);
-  for(i = 0 ; i < 10; i = i + 1)
+	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/B_machine_code_test.txt", RAM);
+  for(i = 0 ; i < 41; i = i + 1)
 	begin 
 	$display ("mem %d is %h", i, RAM[i]); 
 	end
@@ -105,7 +105,7 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, switches, ReadReg1, ReadReg2, reg_2,
     ReadReg1 = 0;
     ReadReg2 = 0;
 	
-	for(i = 0; i < 31; i = i +1)
+	for(i = 0; i < 32; i = i +1)
 	begin 
 	REG[i] = 0; 
 	end 
@@ -167,6 +167,8 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter add8 = 6'b101101; 
   parameter sadd = 6'b110001; 
   parameter ssub = 6'b110010; 
+  parameter mfhi = 6'd010000; 
+  parameter mflo = 6'b010010; 
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;//
@@ -268,13 +270,19 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           nstate = 3'd0;
 		  if (`opcode == jal) begin //load $31 for jal
 			dr_sel_reg = 2'b10; 
+			reg_in_sel = 3'd2; 
 			nstate = 3'd2;
 		  end
         end
         else if (format == R) begin//register instructions
           op = `f_code;
+		  //dr_sel_reg 
 		  if((`f_code == rbit) || (`f_code == rev)) dr_sel_reg = 2'b11; 
 		  else dr_sel_reg = 2'b01;
+		  //reg_in_sel 
+		  if(`f_code == mfhi) reg_in_sel = 3'b11; 
+		  else if(`f_code == mflo) reg_in_sel = 3'd4; 
+		 
 		  
 		end
         else if (format == I) begin //immediate instructions
@@ -292,6 +300,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           else if (`opcode == ori) op = or1;
 		  else if (`opcode == lui) op = lui; //keep adding alu instructions here
 		  
+		  
         end
       end
       2: begin //execute
@@ -305,7 +314,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
         else if (opsave == slt) alu_result = (alu_in_A < alu_in_B)? 32'd1 : 32'd0;
         else if (opsave == xor1) alu_result = alu_in_A ^ alu_in_B;
 		//added for new instructions Anne //
-		else if(opsave == lui) alu_result = {(alu_in_B << 5'd16),16'b0}; // shf immediate left 16 
+		else if(opsave == lui) alu_result = (alu_in_B << 5'd16) ; // shf immediate left 16 
 		else if(opsave == add8) begin 
 		alu_result[31:24] = alu_in_A[31:24] + alu_in_B[31:24]; 
 		alu_result[23:16] = alu_in_A[23:16] + alu_in_B[23:16]; 
@@ -313,7 +322,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 		alu_result[7:0] = alu_in_A[7:0] + alu_in_B[7:0];
 		end 
 		else if(opsave == rbit) 
-		begin // ADD rbit_i 
+		begin 
 		for(rbit_i= 0; rbit_i < 32; rbit_i = rbit_i +1)
 			begin 
 			alu_result[rbit_i] = alu_in_B[ 31 - rbit_i]; 
@@ -327,13 +336,13 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 		alu_result[7:0] = alu_in_B[31:24];
 		end 
 		else if(opsave == sadd)
-		begin // ADD sadd_temp 
+		begin 
 		sadd_temp = alu_in_A + alu_in_B; 
 		if( sadd_temp > 64'h0FFFFFFFF) alu_result = 32'hFFFFFFFF; 
 		else  alu_result = alu_in_A + alu_in_B;
 		end 
 		if(opsave == ssub)
-		begin /// ADD ssub_temp 64b 
+		begin 
 		ssub_temp = alu_in_A - alu_in_B; 
 		if(ssub_temp < 0 ) alu_result = 0; 
 		else alu_result = alu_in_A - alu_in_B;
@@ -356,6 +365,8 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 		else if (`f_code == mult) begin
 			product = readreg1 * readreg2;
 		end
+		else if((`f_code == mfhi) || (`f_code == mflo)) begin regw = 1; nstate = 0; end //CYCLES?
+		
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
