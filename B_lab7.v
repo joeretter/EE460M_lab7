@@ -156,7 +156,6 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter beq = 6'b000100; //branch equal
   parameter bne = 6'b000101; //branch not equal
   parameter j = 6'b000010; // to address
-  parameter jal = 6'b000011; 
 
   //instruction format
   parameter R = 2'd0;
@@ -171,18 +170,17 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
   reg [31:0] alu_result_save;
   reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save;
-  reg [1:0] reg_in_sel, reg_in_sel_save;
   reg fetchDorI;
   wire [4:0] dr;
   reg [2:0] state, nstate;
 
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == R)? instr[15:11] : ((`opcode == 6'd3) ? 5'd31 : instr[20:16]); //Destination Register MUX (MUX1)
+  assign dr = (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
-  assign reg_in = (reg_in_sel_save[1]) ? (pc + 1) : ((reg_in_sel_save[0]) ? Mem_Bus : alu_result_save); //Data MUX
-  assign format = (`opcode == 6'd0)? R : (((`opcode == 6'd2) || (`opcode == 6'd3))? J : I);
+  assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
+  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2)? J : I);
   assign Mem_Bus = (writing)? readreg2 : 32'bZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ;
 
   //drive memory bus only during writes
@@ -192,26 +190,27 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   initial begin
     op = and1; opsave = and1;
     state = 3'b0; nstate = 3'b0;
-    reg_in_sel = 2'b0;
+    alu_or_mem = 0;
     regw = 0;
     fetchDorI = 0;
     writing = 0;
     reg_or_imm = 0; reg_or_imm_save = 0;
-    reg_in_sel_save = 2'b0;
+    alu_or_mem_save = 0;
   end
 
   always @(*)
   begin
     fetchDorI = 0; CS = 0; WE = 0; regw = 0; writing = 0; alu_result = 32'd0;
-    npc = pc; op = jr; reg_or_imm = 0; reg_in_sel = 2'b0; nstate = 3'd0;
+    npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0;
     case (state)
       0: begin //fetch
+        
 		npc = pc + 7'd1; CS = 1; nstate = 3'd1;
         fetchDorI = 1;
 		 
       end
       1: begin //decode
-        nstate = 3'd2; reg_or_imm = 0; reg_in_sel = 2'b0;
+        nstate = 3'd2; reg_or_imm = 0; alu_or_mem = 0;
         if (format == J) begin //jump, and finish
           npc = instr[6:0];
           nstate = 3'd0;
@@ -222,7 +221,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           reg_or_imm = 1;
           if(`opcode == lw) begin
             op = add;
-            reg_in_sel = 2'b1;
+            alu_or_mem = 1;
           end
           else if ((`opcode == lw)||(`opcode == sw)||(`opcode == addi)) op = add;
           else if ((`opcode == beq)||(`opcode == bne)) begin
@@ -231,7 +230,6 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           end
           else if (`opcode == andi) op = and1;
           else if (`opcode == ori) op = or1;
-		  else if(`opcode == jal) op = jal;
         end
       end
       2: begin //execute
@@ -253,10 +251,6 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           npc = alu_in_A[6:0];
           nstate = 3'd0;
         end
-		else if (opsave == jal) begin
-			regw = 1;
-			nstate = 3'd0;
-		end
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
@@ -296,7 +290,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
     else if (state == 3'd1) begin
       opsave <= op;
       reg_or_imm_save <= reg_or_imm;
-      reg_in_sel_save <= reg_in_sel;
+      alu_or_mem_save <= alu_or_mem;
     end
     else if (state == 3'd2) alu_result_save <= alu_result;
 
