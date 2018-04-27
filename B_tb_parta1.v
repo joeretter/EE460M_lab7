@@ -76,14 +76,14 @@ module MIPS_Testbench_B ();
 	end
 	#2
 	$display("5) $2 is: %d", CPU.Register.REG[2]);
-/*
-	//6) sub
+
+	//6) add
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
 	$display("6) $3 is: %d", CPU.Register.REG[3]);
-
+/*
 	//7) xor1
 	repeat(4) begin 
 		@(posedge CLK);
