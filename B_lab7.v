@@ -1,45 +1,3 @@
-
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-module Complete_MIPS(CLK, RST, HALT, reg_1_eight_bits);
-  // Will need to be modified to add functionality
-  input CLK;
-  input RST;
-  input HALT; 
-  //output [31:0] A_Out;
-  //output [31:0] D_Out;
-  output [7:0] reg_1_eight_bits;
-  
-  
- 
-  wire [31:0] reg_1; 
-  wire CS, WE, pulse1;
-  wire [6:0] ADDR;
-  wire [31:0] Mem_Bus;
- 
-  assign reg_1_eight_bits[7:0] = reg_1[7:0]; 
-
-  //assign A_Out = ADDR;
-  //assign D_Out = Mem_Bus;
-  
-   ///////// SIM VS. SYNTH ON BOARD ///////////
-  //assign pulse1 = CLK; // system clk for simulation 
-  
-  var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK, pulse1); //1hz clk for synthesis 
-  
-  ///////// SIM VS. SYNTH ON BOARD ///////////
-  
-  MIPS CPU(pulse1, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
-  Memory MEM(CS, WE, pulse1, ADDR, Mem_Bus);
-  
-
-endmodule
-
 //varilabe clk generate
 //INPUTclk_var 
 //OUTPUT clk divided by (clk_var * 2) = pulse  
@@ -99,7 +57,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
   begin
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/rotating_leds.txt", RAM, 0, 24);
+	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/all_instructions_test.txt", RAM, 0, 24);
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
@@ -120,16 +78,17 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, reg_1);
+module REG(CLK, RegW, DR, SR1, SR2, Reg_In, switches, ReadReg1, ReadReg2, reg_2, reg_3);
   input CLK;
   input RegW;
   input [4:0] DR;
   input [4:0] SR1;
   input [4:0] SR2;
   input [31:0] Reg_In;
+  input [2:0] switches; 
   output reg [31:0] ReadReg1;
   output reg [31:0] ReadReg2;
-  output [31:0] reg_1; 
+  output [31:0] reg_2, reg_3; 
   
   reg [31:0] REG [0:31];
   integer i;
@@ -139,7 +98,8 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, reg_1);
     ReadReg2 = 0;
   end
    
-   assign reg_1 = REG[1]; 
+   assign reg_2 = REG[2]; 
+   assign reg_3 = REG[3]; 
    
   always @(posedge CLK)
   begin
@@ -147,8 +107,9 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, reg_1);
     if(RegW == 1'b1)
       REG[DR] <= Reg_In[31:0];
 
-    ReadReg1 <= REG[SR1];
-    ReadReg2 <= REG[SR2];
+      ReadReg1 <= REG[SR1];
+      ReadReg2 <= REG[SR2];
+	  REG[1] <= {29'b0,switches}; 
   end
 endmodule
 
@@ -165,12 +126,14 @@ endmodule
 `define f_code instr[5:0]
 `define numshift instr[10:6]
 
-module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
-  input CLK, RST, HALT;
+module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
+  input CLK, RST; 
+  input [2:0] switches; 
   output reg CS, WE;
   output [6:0] ADDR;
   inout [31:0] Mem_Bus;
-  output wire [31:0] reg_1; 
+  output wire [31:0] reg_2, reg_3; 
+  
   
 
   //special instructions (opcode == 000000), values of F code (bits 5-0):
@@ -224,7 +187,7 @@ module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
 
   //drive memory bus only during writes
   assign ADDR = (fetchDorI)? pc : alu_result_save[6:0]; //ADDR Mux
-  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, readreg1, readreg2, reg_1);
+  REG Register(CLK, regw, dr, `sr1, `sr2, reg_in, switches, readreg1, readreg2, reg_2, reg_3);
 
   initial begin
     op = and1; opsave = and1;
@@ -243,11 +206,9 @@ module MIPS (CLK, RST, HALT, CS, WE, ADDR, Mem_Bus, reg_1);
     npc = pc; op = jr; reg_or_imm = 0; reg_in_sel = 2'b0; nstate = 3'd0;
     case (state)
       0: begin //fetch
-        if(HALT == 1) begin  nstate = 3'd0; end 
-		else begin 
 		npc = pc + 7'd1; CS = 1; nstate = 3'd1;
         fetchDorI = 1;
-		end 
+		 
       end
       1: begin //decode
         nstate = 3'd2; reg_or_imm = 0; reg_in_sel = 2'b0;
