@@ -291,6 +291,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           else if (`opcode == andi) op = and1;
           else if (`opcode == ori) op = or1;
 		  else if (`opcode == lui) op = lui; //keep adding alu instructions here
+		  
         end
       end
       2: begin //execute
