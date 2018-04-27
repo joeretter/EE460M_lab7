@@ -1,6 +1,6 @@
 //Joe's testbench part a #1
 // You can use this skeleton testbench code, the textbook testbench code, or your own
-module MIPS_Testbench ();
+module MIPS_Testbench_B ();
   reg CLK;
   reg RST;
   wire CS;
@@ -9,6 +9,9 @@ module MIPS_Testbench ();
   wire [31:0] Mem_Bus;
   wire [6:0] Address;
   wire [31:0] reg_2, reg_3; 
+  
+  integer i; 
+  
 
   initial
   begin
@@ -36,6 +39,9 @@ module MIPS_Testbench ();
     @(posedge CLK);
     // driving reset low here puts processor in normal operating mode
     RST = 1'b0;
+	
+	
+	
 	//1) andi
 	repeat(4) begin // wait 4 clk cycles
 		@(posedge CLK);
@@ -48,22 +54,22 @@ module MIPS_Testbench ();
 		@(posedge CLK);
 	end
 	#2
-	$display("2) $1 is: %d", CPU.Register.REG[1]);
+	$display("2) $0 is: %d", CPU.Register.REG[0]);
 
 	//3) addi
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
-	$display("3) $0 is: %d", CPU.Register.REG[0]);
+	$display("3) $2 is: %d", CPU.Register.REG[2]);
 
 	//4) addi
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
-	$display("4) $1 is: %d", CPU.Register.REG[1]);
-
+	$display("4) $3 is: %d", CPU.Register.REG[3]);
+/*
 	//5) add
 	repeat(4) begin 
 		@(posedge CLK);
@@ -183,7 +189,7 @@ module MIPS_Testbench ();
 	#2
 	$display("25) $0 is: %d", CPU.Register.REG[0]);
 
-
+*/
 
 
     /* add your testing code here */

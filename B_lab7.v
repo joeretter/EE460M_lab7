@@ -51,13 +51,25 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 
   reg [31:0] data_out;
   reg [31:0] RAM [0:127];
+  
+  reg [8:0] i; 
 
 
   initial
   begin
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/all_instructions_test_io_2.txt", RAM, 0, 24);
+	//for(i = 0; i < 128; i = i +1)
+	//begin 
+	//RAM[i] <= 32'b0; 
+	//end
+	
+	$readmemb("C:\Users\Anne\Documents\GitHub\EE460M_lab7\all_instructions_test.txt", RAM, 0, 3);
+	for(i = 0 ; i < 10; i = i + 1)
+	begin 
+	$display ("mem %d is %h", i, RAM[i]); 
+	end
+	
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
@@ -96,6 +108,12 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, switches, ReadReg1, ReadReg2, reg_2,
   initial begin
     ReadReg1 = 0;
     ReadReg2 = 0;
+	
+	for(i = 0; i < 31; i = i +1)
+	begin 
+	REG[i] <= 0; 
+	end 
+	
   end
    
    assign reg_2 = REG[2]; 
