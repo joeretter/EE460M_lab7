@@ -57,7 +57,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
   begin
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/all_instructions_test.txt", RAM, 0, 24);
+	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/all_instructions_test_io_2.txt", RAM, 0, 24);
   end
 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
