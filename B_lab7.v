@@ -160,6 +160,9 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter srl = 6'b000010; //shift right logical
   parameter sll = 6'b000000; //shift left logical
   parameter jr = 6'b001000; //jump register
+  parameter rbit = 6'b101111;
+  parameter rev = 6'b110000;
+  parameter mult = 6'b011000;
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;//
@@ -170,7 +173,9 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter beq = 6'b000100; //branch equal
   parameter bne = 6'b000101; //branch not equal
   parameter j = 6'b000010; // to address
-
+  parameter jal = 6'b000011;
+  parameter lui = 6'b001111;
+  
   //instruction format
   parameter R = 2'd0;
   parameter I = 2'd1;
@@ -183,18 +188,24 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   reg [6:0] pc, npc;
   wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
   reg [31:0] alu_result_save;
-  reg alu_or_mem, alu_or_mem_save, regw, writing, reg_or_imm, reg_or_imm_save;
+  reg /*alu_or_mem, alu_or_mem_save, */regw, writing, reg_or_imm, reg_or_imm_save;
+  reg [2:0] reg_in_sel, reg_in_sel_save; 
   reg fetchDorI;
   wire [4:0] dr;
+  wire [1:0] dr_sel;
   reg [2:0] state, nstate;
+  reg [31:0] HI, LO;
+  reg [63:0] product;
+  reg ldHILO;
 
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
-  assign dr = (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
+  //assign dr = (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
+  assign dr = dr_sel[1] ? (dr_sel[0] ? instr[25:21] : 5'd31) : (dr_sel[0] ? instr[15:11] : instr[20:16]);
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
-  assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX
-  assign format = (`opcode == 6'd0)? R : ((`opcode == 6'd2)? J : I);
+  //assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX SEE NEXT ALWAYS BLOCK
+  assign format = (`opcode == 6'd0)? R : (((`opcode == j) || (`opcode == jal))? J : I);
   assign Mem_Bus = (writing)? readreg2 : 32'bZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ;
 
   //drive memory bus only during writes
@@ -204,18 +215,32 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   initial begin
     op = and1; opsave = and1;
     state = 3'b0; nstate = 3'b0;
-    alu_or_mem = 0;
+    reg_in_sel = 3'b0;
     regw = 0;
     fetchDorI = 0;
     writing = 0;
     reg_or_imm = 0; reg_or_imm_save = 0;
-    alu_or_mem_save = 0;
+    reg_in_sel_save = 3'b0;
   end
+  
+  always @(*) //MUX 3
+  begin
+	case(reg_in_sel_save)
+		3'd0 : reg_in = alu_result_save;
+		3'd1 : reg_in = Mem_Bus;
+		3'd2 : reg_in = npc; //may need to double check this one
+		3'd3 : reg_in = HI;
+		3'd4 : reg_in = LO;
+	default : reg_in = reg_in;
+	endcase
+  end
+  
 
   always @(*)
   begin
     fetchDorI = 0; CS = 0; WE = 0; regw = 0; writing = 0; alu_result = 32'd0;
-    npc = pc; op = jr; reg_or_imm = 0; alu_or_mem = 0; nstate = 3'd0;
+    npc = pc; op = jr; reg_or_imm = 0; reg_in_sel = 3'b0; nstate = 3'd0;
+	ldHILO = 0;
     case (state)
       0: begin //fetch
         
@@ -224,18 +249,26 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 		 
       end
       1: begin //decode
-        nstate = 3'd2; reg_or_imm = 0; alu_or_mem = 0;
+        nstate = 3'd2; reg_or_imm = 0; reg_in_sel = 3'b0; dr_sel = 2'b00;
         if (format == J) begin //jump, and finish
           npc = instr[6:0];
           nstate = 3'd0;
+		  if (`opcode == jal) begin //load $31 for jal
+			dr_sel = 2'b10; 
+			nstate = 3'd2;
+		  end
         end
-        else if (format == R) //register instructions
+        else if (format == R) begin//register instructions
           op = `f_code;
+		  if((`f_code == rbit) || (`f_code == rev)) dr_sel = 2'b11; 
+		  else dr_sel = 2'b01;
+		  
+		end
         else if (format == I) begin //immediate instructions
           reg_or_imm = 1;
           if(`opcode == lw) begin
             op = add;
-            alu_or_mem = 1;
+            reg_in_sel = 3'b001;
           end
           else if ((`opcode == lw)||(`opcode == sw)||(`opcode == addi)) op = add;
           else if ((`opcode == beq)||(`opcode == bne)) begin
@@ -244,6 +277,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           end
           else if (`opcode == andi) op = and1;
           else if (`opcode == ori) op = or1;
+		  else if (`opcode == lui) op = lui; //keep adding alu instructions here
         end
       end
       2: begin //execute
@@ -265,10 +299,17 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           npc = alu_in_A[6:0];
           nstate = 3'd0;
         end
+		else if (`opcode == jal) begin
+			regw = 1;
+			nstate = 3'd0;
+		end
+		else if (`fcode == mult) begin
+			product = readreg1 * readreg2;
+		end
       end
       3: begin //prepare to write to mem
         nstate = 3'd0;
-        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)) regw = 1;
+        if ((format == R)||(`opcode == addi)||(`opcode == andi)||(`opcode == ori)||(`opcode == lui)) regw = 1;
         else if (`opcode == sw) begin
           CS = 1;
           WE = 1;
@@ -278,6 +319,10 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           CS = 1;
           nstate = 3'd4;
         end
+		if(`fcode == mult) begin
+		  regw = 0;
+		  ldHILO = 1;
+		end
       end
       4: begin
         nstate = 3'd0;
@@ -304,10 +349,17 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
     else if (state == 3'd1) begin
       opsave <= op;
       reg_or_imm_save <= reg_or_imm;
-      alu_or_mem_save <= alu_or_mem;
+      //alu_or_mem_save <= alu_or_mem;
+	  reg_in_sel_save <= reg_in_sel;
     end
-    else if (state == 3'd2) alu_result_save <= alu_result;
+    else if (state == 3'd2) alu_result_save <= alu_result;]
+	
+	if(ldHILO) begin
+		HI <= product[63:32];
+		LO <= product[31:0];
+	end
 
   end //always
+  
 
 endmodule
