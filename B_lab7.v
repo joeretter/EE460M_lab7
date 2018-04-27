@@ -163,6 +163,10 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter rbit = 6'b101111;
   parameter rev = 6'b110000;
   parameter mult = 6'b011000;
+  //f_codes special instruction Anne 
+  parameter add8 = 6'b101101; 
+  parameter sadd = 6'b110001; 
+  parameter ssub = 6'b110010; 
 
   //non-special instructions, values of opcodes:
   parameter addi = 6'b001000;//
@@ -176,6 +180,8 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   parameter jal = 6'b000011;
   parameter lui = 6'b001111;
   
+
+  
   //instruction format
   parameter R = 2'd0;
   parameter I = 2'd1;
@@ -186,22 +192,29 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
   wire [1:0] format;
   reg [31:0] instr, alu_result;
   reg [6:0] pc, npc;
-  wire [31:0] imm_ext, alu_in_A, alu_in_B, reg_in, readreg1, readreg2;
+  wire [31:0] imm_ext, alu_in_A, alu_in_B, readreg1, readreg2;
+  reg [31:0] reg_in; 
   reg [31:0] alu_result_save;
   reg /*alu_or_mem, alu_or_mem_save, */regw, writing, reg_or_imm, reg_or_imm_save;
   reg [2:0] reg_in_sel, reg_in_sel_save; 
   reg fetchDorI;
   wire [4:0] dr;
   wire [1:0] dr_sel;
+  reg [1:0] dr_sel_reg; 
   reg [2:0] state, nstate;
   reg [31:0] HI, LO;
   reg [63:0] product;
   reg ldHILO;
+  
+  //new var Anne
+  reg [8:0] rbit_i; 
+  reg [63:0] sadd_temp, ssub_temp;   
 
   //combinational
   assign imm_ext = (instr[15] == 1)? {16'hFFFF, instr[15:0]} : {16'h0000, instr[15:0]};//Sign extend immediate field
   //assign dr = (format == R)? instr[15:11] : instr[20:16]; //Destination Register MUX (MUX1)
   assign dr = dr_sel[1] ? (dr_sel[0] ? instr[25:21] : 5'd31) : (dr_sel[0] ? instr[15:11] : instr[20:16]);
+  assign dr_sel = dr_sel_reg; 
   assign alu_in_A = readreg1;
   assign alu_in_B = (reg_or_imm_save)? imm_ext : readreg2; //ALU MUX (MUX2)
   //assign reg_in = (alu_or_mem_save)? Mem_Bus : alu_result_save; //Data MUX SEE NEXT ALWAYS BLOCK
@@ -249,19 +262,19 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 		 
       end
       1: begin //decode
-        nstate = 3'd2; reg_or_imm = 0; reg_in_sel = 3'b0; dr_sel = 2'b00;
+        nstate = 3'd2; reg_or_imm = 0; reg_in_sel = 3'b0; dr_sel_reg = 2'b00;
         if (format == J) begin //jump, and finish
           npc = instr[6:0];
           nstate = 3'd0;
 		  if (`opcode == jal) begin //load $31 for jal
-			dr_sel = 2'b10; 
+			dr_sel_reg = 2'b10; 
 			nstate = 3'd2;
 		  end
         end
         else if (format == R) begin//register instructions
           op = `f_code;
-		  if((`f_code == rbit) || (`f_code == rev)) dr_sel = 2'b11; 
-		  else dr_sel = 2'b01;
+		  if((`f_code == rbit) || (`f_code == rev)) dr_sel_reg = 2'b11; 
+		  else dr_sel_reg = 2'b01;
 		  
 		end
         else if (format == I) begin //immediate instructions
@@ -290,6 +303,42 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
         else if (opsave == sll) alu_result = alu_in_B << `numshift;
         else if (opsave == slt) alu_result = (alu_in_A < alu_in_B)? 32'd1 : 32'd0;
         else if (opsave == xor1) alu_result = alu_in_A ^ alu_in_B;
+		//added for new instructions Anne //
+		else if(opsave == lui) alu_result = {(alu_in_B << 5'd16),16'b0}; // shf immediate left 16 
+		else if(opsave == add8) begin 
+		alu_result[31:24] = alu_in_A[31:24] + alu_in_B[31:24]; 
+		alu_result[23:16] = alu_in_A[23:16] + alu_in_B[23:16]; 
+		alu_result[15:8] = alu_in_A[15:8] + alu_in_B[15:8]; 
+		alu_result[7:0] = alu_in_A[7:0] + alu_in_B[7:0];
+		end 
+		else if(opsave == rbit) 
+		begin // ADD rbit_i 
+		for(rbit_i= 0; rbit_i < 32; rbit_i = rbit_i +1)
+			begin 
+			alu_result[rbit_i] = alu_in_B[ 31 - rbit_i]; 
+			end 
+		end 
+		else if(opsave == rev)
+		begin 
+		alu_result[31:24] = alu_in_B[7:0]; 
+		alu_result[23:16] = alu_in_B[15:8];
+		alu_result[15:8] = alu_in_B[23:16];
+		alu_result[7:0] = alu_in_B[31:24];
+		end 
+		else if(opsave == sadd)
+		begin // ADD sadd_temp 
+		sadd_temp = alu_in_A + alu_in_B; 
+		if( sadd_temp > 64'h0FFFFFFFF) alu_result = 32'hFFFFFFFF; 
+		else  alu_result = alu_in_A + alu_in_B;
+		end 
+		if(opsave == ssub)
+		begin /// ADD ssub_temp 64b 
+		ssub_temp = alu_in_A - alu_in_B; 
+		if(ssub_temp < 0 ) alu_result = 0; 
+		else alu_result = alu_in_A - alu_in_B;
+		end 
+		///////////////////////////////
+		
         if (((alu_in_A == alu_in_B)&&(`opcode == beq)) || ((alu_in_A != alu_in_B)&&(`opcode == bne))) begin
           npc = pc + imm_ext[6:0];
           nstate = 3'd0;
@@ -303,7 +352,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
 			regw = 1;
 			nstate = 3'd0;
 		end
-		else if (`fcode == mult) begin
+		else if (`f_code == mult) begin
 			product = readreg1 * readreg2;
 		end
       end
@@ -319,7 +368,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
           CS = 1;
           nstate = 3'd4;
         end
-		if(`fcode == mult) begin
+		if(`f_code == mult) begin
 		  regw = 0;
 		  ldHILO = 1;
 		end
@@ -352,7 +401,7 @@ module MIPS (CLK, RST, switches, CS, WE, ADDR, Mem_Bus, reg_2, reg_3);
       //alu_or_mem_save <= alu_or_mem;
 	  reg_in_sel_save <= reg_in_sel;
     end
-    else if (state == 3'd2) alu_result_save <= alu_result;]
+    else if (state == 3'd2) alu_result_save <= alu_result;
 	
 	if(ldHILO) begin
 		HI <= product[63:32];
