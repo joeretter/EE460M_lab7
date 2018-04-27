@@ -28,9 +28,9 @@ module Complete_MIPS(CLK, RST, HALT, reg_1_eight_bits);
   //assign D_Out = Mem_Bus;
   
    ///////// SIM VS. SYNTH ON BOARD ///////////
-  //assign pulse1 = CLK; // system clk for simulation 
+  assign pulse1 = CLK; // system clk for simulation 
   
-  var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK, pulse1); //1hz clk for synthesis 
+  //var_clk_div #(64'd50000000) var_clk_div_1(RST, CLK, pulse1); //1hz clk for synthesis 
   
   ///////// SIM VS. SYNTH ON BOARD ///////////
   
@@ -93,15 +93,23 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 
   reg [31:0] data_out;
   reg [31:0] RAM [0:127];
-
+  integer i,p; 
 
   initial
   begin
+    for(p = 0; p < 128; p = p +1)
+	begin 
+	RAM[p] = 32'b0; 
+	end
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/rotating_leds.txt", RAM, 0, 24);
+	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/small_program.txt", RAM, 0, 24);
+  for(i = 0 ; i < 10; i = i + 1)
+	begin 
+	$display ("mem %d is %h", i, RAM[i]); 
+	end
   end
-
+ 
   assign Mem_Bus = ((CS == 1'b0) || (WE == 1'b1)) ? 32'bZ : data_out;
 
   always @(negedge CLK)
@@ -137,6 +145,12 @@ module REG(CLK, RegW, DR, SR1, SR2, Reg_In, ReadReg1, ReadReg2, reg_1);
   initial begin
     ReadReg1 = 0;
     ReadReg2 = 0;
+	
+	for(i = 0; i < 31; i = i +1)
+	begin 
+	REG[i] = 0; 
+	end 
+	
   end
    
    assign reg_1 = REG[1]; 

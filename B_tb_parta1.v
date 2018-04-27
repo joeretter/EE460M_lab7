@@ -54,29 +54,29 @@ module MIPS_Testbench_B ();
 		@(posedge CLK);
 	end
 	#2
-	$display("2) $0 is: %d", CPU.Register.REG[0]);
+	$display("2) $4 is: %d", CPU.Register.REG[4]);
 
 	//3) addi
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
-	$display("3) $2 is: %d", CPU.Register.REG[2]);
+	$display("3) $4 is: %d", CPU.Register.REG[4]);
 
 	//4) addi
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
-	$display("4) $3 is: %d", CPU.Register.REG[3]);
-/*
+	$display("4) $5 is: %d", CPU.Register.REG[5]);
+
 	//5) add
 	repeat(4) begin 
 		@(posedge CLK);
 	end
 	#2
 	$display("5) $2 is: %d", CPU.Register.REG[2]);
-
+/*
 	//6) sub
 	repeat(4) begin 
 		@(posedge CLK);

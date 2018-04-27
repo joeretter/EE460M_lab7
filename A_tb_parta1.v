@@ -8,13 +8,15 @@ module MIPS_Testbench ();
   wire [31:0] Mem_Bus;
   wire [6:0] Address;
   wire [31:0] reg_1; 
+  reg HALT; 
 
   initial
   begin
     CLK = 0;
+	HALT = 0; 
   end
 
-  MIPS CPU(CLK, RST, CS, WE, Address, Mem_Bus, reg_1);
+  MIPS CPU(CLK, RST,HALT, CS, WE, Address, Mem_Bus, reg_1);
   Memory MEM(CS, WE, CLK, Address, Mem_Bus);
 
   always
