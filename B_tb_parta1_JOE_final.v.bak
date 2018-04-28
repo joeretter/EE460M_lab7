@@ -22,7 +22,6 @@ module MIPS_Testbench_B ();
 	repeat (2) begin
 		@(posedge CLK);
 	end
-	#2;
 	RST = 1'b0;
   end
 
@@ -37,7 +36,9 @@ module MIPS_Testbench_B ();
 
   always @(posedge CLK)
   begin
-	$display("state: %d,  nstate: %d", CPU.state, CPU.nstate);
+	#2;
+	$display("display state: %d,  nstate: %d", CPU.state, CPU.nstate);
+	$strobe("strobe state: %d,  nstate: %d", CPU.state, CPU.nstate);
 	$display("opcode is: %b,  pc is: %d, npc %d", CPU.instr[31:26], CPU.pc, CPU.npc);
 	$display("$31 is: %d", CPU.Register.REG[31]);
 	for(a = 0; a < 9; a = a + 1 )

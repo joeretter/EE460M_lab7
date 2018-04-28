@@ -103,7 +103,7 @@ module Memory(CS, WE, CLK, ADDR, Mem_Bus);
 	end
     /* Write your Verilog-Text IO code here */
 	//write a separate text file with MIPS machine code in hexidecimal
-	$readmemb("C:/Users/Anne/Documents/GitHub/EE460M_lab7/small_program.txt", RAM, 0, 24);
+	$readmemb("C:/Users/Joe/Documents/GitHub/EE460M_lab7/rotating_leds.txt", RAM);
   for(i = 0 ; i < 10; i = i + 1)
 	begin 
 	$display ("mem %d is %h", i, RAM[i]); 
